@@ -97,13 +97,17 @@ class InvitationsBatchView(APIView):
         result['failed'] = []
         result['success'] = []
 
+        import logging
+        logger = logging.getLogger(__name__)
         for accepter in accepters:
+            logger.error(accepter)
 
             if not accepter.strip():
                 continue
 
             accepter = accepter.lower()
 
+            logger.error(1)
             if not is_valid_email(accepter):
                 result['failed'].append({
                     'email': accepter,
@@ -111,6 +115,7 @@ class InvitationsBatchView(APIView):
                     })
                 continue
 
+            logger.error(2)
             if block_accepter(accepter):
                 result['failed'].append({
                     'email': accepter,
@@ -118,6 +123,7 @@ class InvitationsBatchView(APIView):
                     })
                 continue
 
+            logger.error(3)
             if Invitation.objects.filter(inviter=request.user.username,
                     accepter=accepter).count() > 0:
                 result['failed'].append({
@@ -126,6 +132,7 @@ class InvitationsBatchView(APIView):
                     })
                 continue
 
+            logger.error(4)
             try:
                 user = User.objects.get(accepter)
                 # user is active return exist
@@ -138,15 +145,19 @@ class InvitationsBatchView(APIView):
             except User.DoesNotExist:
                 pass
 
+            logger.error(5)
             i = Invitation.objects.add(inviter=request.user.username,
                     accepter=accepter)
             result['success'].append(i.to_dict())
 
+            logger.error(6)
             m = i.send_to(email=accepter)
+            logger.error(m.__dict__)
             if m.status != STATUS.sent:
                 result['failed'].append({
                     'email': accepter,
                     'error_msg': _('Failed to send email, email service is not properly configured, please contact administrator.'),
                 })
 
+            logger.error(8)
         return Response(result)
